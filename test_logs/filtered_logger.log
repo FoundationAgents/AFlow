@@ -1,0 +1,3 @@
+2025-07-14 20:14:40 - WARNING - This WARNING message should appear in YELLOW
+2025-07-14 20:14:40 - ERROR - This ERROR message should appear in RED
+2025-07-14 20:14:40 - CRITICAL - This CRITICAL message should appear in BOLD MAGENTA

@@ -4,12 +4,16 @@
 # @Desc    : Download and extract dataset files
 
 import os
+import sys
 import tarfile
 import shutil
 from typing import Dict
 
 import requests
 from tqdm import tqdm
+
+# Add the parent directory to sys.path to import scripts module
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scripts.logs import logger
 

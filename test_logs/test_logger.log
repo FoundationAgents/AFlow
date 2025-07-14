@@ -1,0 +1,5 @@
+2025-07-14 20:14:40 - DEBUG - This is a DEBUG message - Should appear in BLUE
+2025-07-14 20:14:40 - INFO - This is an INFO message - Should appear in GREEN
+2025-07-14 20:14:40 - WARNING - This is a WARNING message - Should appear in YELLOW
+2025-07-14 20:14:40 - ERROR - This is an ERROR message - Should appear in RED
+2025-07-14 20:14:40 - CRITICAL - This is a CRITICAL message - Should appear in BOLD MAGENTA
