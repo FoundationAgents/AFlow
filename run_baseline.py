@@ -15,8 +15,8 @@ from scripts.logs import logger
 from scripts.async_llm import create_llm_instance
 
 # Import the new Workflow from MBPP workspace
-import workspace.MBPP.workflows.round_8.graph as mbpp_workflow
-import workspace.LiveCodeBench.workflows.round_2.graph as livecodebench_workflow
+import workspace.MBPP.workflows.round_1.graph as mbpp_workflow
+import workspace.LiveCodeBench.workflows.round_1.graph as livecodebench_workflow
 import workspace.MBPP.workflows.template.operator as mbpp_operator
 
 from scripts.evaluator import DatasetType
@@ -77,7 +77,7 @@ async def main():
     # log_path refer to the folder of output csv.
     # test_hotpotqa_benchmark = HotpotQABenchmark(name="HotpotQA", file_path="data/hotpotqa_validate.jsonl", log_path="")
     test_mbpp_benchmark = MBPPBenchmark(name="MBPP", file_path="data/datasets/mbpp_test.jsonl", log_path="")
-    test_livecodebench = LiveCodeBench(name="LiveCodeBench", file_path="data/datasets/livecodebench_raw_validate.jsonl", log_path="experiments/lcb")
+    test_livecodebench = LiveCodeBench(name="LiveCodeBench", file_path="data/datasets/livecodebench_validate.jsonl", log_path="experiments/lcb")
     # test_livecodebench = LiveCodeBench(name="LiveCodeBench", file_path="data/datasets/livecodebench_validate.jsonl", log_path="")
     
     # results = await test_mbpp_benchmark.run_baseline(mbpp_test_workflow)
