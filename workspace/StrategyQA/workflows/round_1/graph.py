@@ -22,5 +22,7 @@ class Workflow:
         """
         Implementation of the workflow
         """
-        solution = await self.custom(input=problem, instruction="")
+        solution = await self.custom(
+            input=problem, instruction=prompt_custom.SOLVE_PROMPT
+        )
         return solution["response"], self.llm.get_usage_summary()["total_cost"]
