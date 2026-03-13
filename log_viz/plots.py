@@ -1,11 +1,11 @@
 """Plotly visualization functions for AFlow optimization results."""
 
-from typing import Optional
+from typing import Dict, Optional
 
 import pandas as pd
 import plotly.graph_objects as go
 
-from utils.config import COLORS, PLOT_HEIGHT
+from utils.config import COLORS, EVE_DIMENSION_COLORS, EVE_DIMENSIONS, PLOT_HEIGHT
 
 
 def create_score_progression_plot(
@@ -135,6 +135,151 @@ def create_cost_progression_plot(val_df: pd.DataFrame) -> go.Figure:
         template="plotly_white",
         height=PLOT_HEIGHT,
         xaxis=dict(dtick=1),
+    )
+    return fig
+
+
+def create_eve_dimension_progression(
+    df: pd.DataFrame,
+    source: str = "val",
+) -> go.Figure:
+    """Multi-line chart of per-dimension scores across MCTS rounds."""
+    fig = go.Figure()
+
+    if df.empty:
+        return fig
+
+    # Plot each dimension
+    for dim in EVE_DIMENSIONS:
+        if dim not in df.columns:
+            continue
+        fig.add_trace(
+            go.Scatter(
+                x=df["round"],
+                y=df[dim] * 100,
+                mode="lines+markers",
+                name=dim.capitalize(),
+                line=dict(color=EVE_DIMENSION_COLORS[dim], width=2),
+                marker=dict(size=6),
+                hovertemplate=f"<b>Round %{{x}}</b><br>{dim.capitalize()}: %{{y:.1f}}%<extra></extra>",
+            )
+        )
+
+    # Overall score — thicker dashed line
+    if "score" in df.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=df["round"],
+                y=df["score"] * 100,
+                mode="lines+markers",
+                name="Overall",
+                line=dict(color=EVE_DIMENSION_COLORS["score"], width=3, dash="dash"),
+                marker=dict(size=8),
+                hovertemplate="<b>Round %{x}</b><br>Overall: %{y:.1f}%<extra></extra>",
+            )
+        )
+
+    split_label = source.upper()
+    fig.update_layout(
+        title="Dimension Progression",
+        xaxis_title="MCTS Round",
+        yaxis_title=f"Score — {split_label} (%)",
+        template="plotly_white",
+        height=PLOT_HEIGHT,
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        xaxis=dict(dtick=1),
+    )
+    return fig
+
+
+def create_eve_radar_chart(
+    baseline_scores: Dict[str, float],
+    best_scores: Dict[str, float],
+) -> go.Figure:
+    """Radar chart comparing Eve baseline vs AFlow best round on 4 dimensions."""
+    dimensions = EVE_DIMENSIONS
+    labels = [d.capitalize() for d in dimensions]
+
+    baseline_vals = [baseline_scores.get(d, 0) * 100 for d in dimensions]
+    best_vals = [best_scores.get(d, 0) * 100 for d in dimensions]
+
+    # Close the polygon
+    baseline_vals.append(baseline_vals[0])
+    best_vals.append(best_vals[0])
+    labels_closed = labels + [labels[0]]
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scatterpolar(
+            r=baseline_vals,
+            theta=labels_closed,
+            fill="toself",
+            name="Eve Baseline",
+            line=dict(color=COLORS["secondary"], dash="dash"),
+            opacity=0.5,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatterpolar(
+            r=best_vals,
+            theta=labels_closed,
+            fill="toself",
+            name="AFlow Best",
+            line=dict(color=COLORS["primary"]),
+            opacity=0.7,
+        )
+    )
+
+    fig.update_layout(
+        title="Baseline vs Best Round",
+        polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+        template="plotly_white",
+        height=PLOT_HEIGHT,
+        legend=dict(yanchor="top", y=1.1, xanchor="left", x=0.01),
+    )
+    return fig
+
+
+def create_eve_dimension_comparison_bar(
+    baseline_scores: Dict[str, float],
+    best_scores: Dict[str, float],
+) -> go.Figure:
+    """Grouped bar chart comparing baseline vs best across 4 dimensions."""
+    dimensions = EVE_DIMENSIONS
+    labels = [d.capitalize() for d in dimensions]
+
+    baseline_vals = [baseline_scores.get(d, 0) * 100 for d in dimensions]
+    best_vals = [best_scores.get(d, 0) * 100 for d in dimensions]
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=labels,
+            y=baseline_vals,
+            name="Eve Baseline",
+            marker_color=COLORS["secondary"],
+            hovertemplate="<b>%{x}</b><br>Baseline: %{y:.1f}%<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            x=labels,
+            y=best_vals,
+            name="AFlow Best",
+            marker_color=COLORS["primary"],
+            hovertemplate="<b>%{x}</b><br>Best: %{y:.1f}%<extra></extra>",
+        )
+    )
+
+    fig.update_layout(
+        title="Dimension Comparison",
+        yaxis_title="Score (%)",
+        template="plotly_white",
+        height=PLOT_HEIGHT,
+        barmode="group",
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
     )
     return fig
 

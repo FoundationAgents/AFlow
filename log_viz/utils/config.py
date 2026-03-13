@@ -30,3 +30,20 @@ COLORS = {
     "validation": "#FF6F00",
     "test": "#0091EA",
 }
+
+# Eve AICW dimension configuration
+EVE_DIMENSIONS = ["verbosity", "tone", "assertiveness", "empathy"]
+EVE_BASELINE = {
+    "verbosity": 0.871,
+    "tone": 0.870,
+    "assertiveness": 0.847,
+    "empathy": 0.516,
+    "score": 0.776,
+}
+EVE_DIMENSION_COLORS = {
+    "verbosity": "#7B1FA2",
+    "tone": "#0091EA",
+    "assertiveness": "#FF6F00",
+    "empathy": "#00C853",
+    "score": "#D50000",
+}

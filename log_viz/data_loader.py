@@ -12,6 +12,7 @@ import streamlit as st
 from utils.config import (
     CACHE_TTL_DATASETS,
     CACHE_TTL_RESULTS,
+    EVE_DIMENSIONS,
     PROJECT_ROOT,
     WORKSPACE_DIR,
     WORKSPACE_DIRS,
@@ -264,6 +265,46 @@ class AFlowDataLoader:
         if not path.exists():
             return None
         return path.read_text()
+
+    def load_round_csv(self, dataset: str, round_num: int) -> Optional[pd.DataFrame]:
+        """Load the per-sample CSV file from a round directory.
+
+        CSV files are named {avg_score}_{timestamp}.csv (e.g. 0.77600_20260313_100000.csv).
+        """
+        round_dir = self._workflows_path(dataset) / f"round_{round_num}"
+        if not round_dir.exists():
+            return None
+        csv_files = list(round_dir.glob("*.csv"))
+        if not csv_files:
+            return None
+        return pd.read_csv(csv_files[0])
+
+    @st.cache_data(ttl=CACHE_TTL_RESULTS)
+    def load_eve_dimension_summary(_self, dataset: str) -> pd.DataFrame:
+        """Aggregate per-dimension scores from round CSVs.
+
+        Returns DataFrame with columns: round, verbosity, tone, assertiveness, empathy, score.
+        Only includes rounds that have CSV files with dimension columns.
+        """
+        rows = []
+        for r in _self.get_available_rounds(dataset):
+            csv_df = _self.load_round_csv(dataset, r)
+            if csv_df is None:
+                continue
+            # Check that dimension columns exist
+            available_dims = [d for d in EVE_DIMENSIONS if d in csv_df.columns]
+            if not available_dims:
+                continue
+            row = {"round": r}
+            for dim in EVE_DIMENSIONS:
+                if dim in csv_df.columns:
+                    row[dim] = csv_df[dim].mean()
+            if "score" in csv_df.columns:
+                row["score"] = csv_df["score"].mean()
+            rows.append(row)
+        if not rows:
+            return pd.DataFrame()
+        return pd.DataFrame(rows).sort_values("round").reset_index(drop=True)
 
     @st.cache_data(ttl=CACHE_TTL_DATASETS)
     def get_dataset_split_sizes(_self, dataset: str) -> Dict[str, int]:
