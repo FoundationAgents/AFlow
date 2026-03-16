@@ -12,6 +12,7 @@ import streamlit as st
 from utils.config import (
     CACHE_TTL_DATASETS,
     CACHE_TTL_RESULTS,
+    EVE_BASELINE,
     EVE_DIMENSIONS,
     PROJECT_ROOT,
     WORKSPACE_DIR,
@@ -389,7 +390,26 @@ class AFlowDataLoader:
                 dataset, split="dev"
             )
 
-        baseline_csv = self.load_round_csv(dataset, baseline_round, split=split)
+        if baseline_round == 0:
+            # R0 = Eve app baseline; no per-sample CSV exists.
+            # Use a scaffold CSV from the first best round and fill with
+            # EVE_BASELINE constants so that per-sample deltas can be computed.
+            first_best_rnd = next(iter(best_rounds_per_dim.values()), None)
+            if first_best_rnd is None:
+                return {}
+            scaffold_csv = self.load_round_csv(dataset, first_best_rnd, split=split)
+            if scaffold_csv is None:
+                return {}
+            baseline_csv = scaffold_csv.copy()
+            for dim in EVE_DIMENSIONS:
+                if dim in baseline_csv.columns:
+                    baseline_csv[dim] = EVE_BASELINE.get(dim, 0)
+            if "score" in baseline_csv.columns:
+                baseline_csv["score"] = EVE_BASELINE.get("score", 0)
+            if "prediction" in baseline_csv.columns:
+                baseline_csv["prediction"] = "(Eve app baseline)"
+        else:
+            baseline_csv = self.load_round_csv(dataset, baseline_round, split=split)
         if baseline_csv is None:
             return {}
 

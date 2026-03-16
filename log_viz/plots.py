@@ -179,12 +179,23 @@ def create_cost_all_splits_plot(
 def create_eve_dimension_progression(
     df: pd.DataFrame,
     source: str = "val",
+    baseline: Optional[Dict[str, float]] = None,
 ) -> go.Figure:
     """Multi-line chart of per-dimension scores across MCTS rounds."""
     fig = go.Figure()
 
     if df.empty:
         return fig
+
+    # Prepend Round 0 (Eve app baseline) if provided
+    if baseline:
+        r0: Dict[str, object] = {"round": 0}
+        for dim in EVE_DIMENSIONS:
+            if dim in baseline:
+                r0[dim] = baseline[dim]
+        if "score" in baseline:
+            r0["score"] = baseline["score"]
+        df = pd.concat([pd.DataFrame([r0]), df], ignore_index=True)
 
     # Plot each dimension
     for dim in EVE_DIMENSIONS:
@@ -333,8 +344,19 @@ def create_split_comparison(
     train_df: pd.DataFrame,
     dev_df: Optional[pd.DataFrame] = None,
     test_df: Optional[pd.DataFrame] = None,
+    baseline_score: Optional[float] = None,
 ) -> go.Figure:
     """Grouped bar chart comparing train/dev/test scores across rounds."""
+    # Prepend Round 0 (Eve app baseline) to each split
+    if baseline_score is not None:
+        r0_row = pd.DataFrame([{"round": 0, "score": baseline_score}])
+        if train_df is not None and not train_df.empty:
+            train_df = pd.concat([r0_row, train_df], ignore_index=True)
+        if dev_df is not None and not dev_df.empty:
+            dev_df = pd.concat([r0_row, dev_df], ignore_index=True)
+        if test_df is not None and not test_df.empty:
+            test_df = pd.concat([r0_row, test_df], ignore_index=True)
+
     # Find rounds common to all available splits
     common_rounds = set(train_df["round"].tolist())
     if dev_df is not None and not dev_df.empty:

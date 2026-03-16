@@ -164,10 +164,15 @@ def _generate_mcts_mermaid(
     if 1 not in scores and scores:
         scores[1] = 0.0  # placeholder; template has no eval score in tree data
 
+    # Determine the root node (R0 if present, else R1)
+    root_id = 0 if 0 in scores else 1
+
     # Define all nodes (sorted so earlier rounds appear first → Mermaid puts them higher)
     for round_id, score in sorted(scores.items()):
         node_id = f"R{round_id}"
-        if score > 0:
+        if round_id == 0:
+            label = f"R0 ({score:.1%}) Eve App"
+        elif score > 0:
             label = f"R{round_id} ({score:.1%})"
         else:
             label = f"R{round_id} (template)" if round_id == 1 else f"R{round_id} (0%)"
@@ -181,10 +186,10 @@ def _generate_mcts_mermaid(
             cls = "normal"
         lines.append(f"    class {node_id} {cls}")
 
-    # Connect root (round 1) to any node that has no parent in the edge list
-    orphans = sorted(rid for rid in scores if rid != 1 and rid not in child_set)
+    # Connect root to any node that has no parent in the edge list
+    orphans = sorted(rid for rid in scores if rid != root_id and rid not in child_set)
     for orphan in orphans:
-        lines.append(f'    R1 -->|"initial"| R{orphan}')
+        lines.append(f'    R{root_id} -->|"initial"| R{orphan}')
 
     # Define edges with colored links (labels already shortened in _parse_tree)
     for parent, child, _success, label in edges:
@@ -233,6 +238,7 @@ def display_mcts_tree(
     experiences: Optional[Dict[int, Dict]] = None,
     dev_scores: Optional[Dict[int, float]] = None,
     score_label: str = "Train",
+    baseline_score: Optional[float] = None,
 ) -> None:
     """Render the MCTS search tree using Mermaid.
 
@@ -248,6 +254,12 @@ def display_mcts_tree(
     if not scores:
         st.info("No tree nodes to display.")
         return
+
+    # Inject Round 0 (Eve app baseline) as root
+    if baseline_score is not None:
+        scores[0] = baseline_score
+        if 1 in scores:
+            edges.insert(0, (0, 1, scores.get(1, 0) > baseline_score, "template"))
 
     # Override scores with dev partition if provided
     if dev_scores:
