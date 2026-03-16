@@ -26,6 +26,15 @@ The evaluation extracts the content of the last \\boxed{} in the output.
 - BAD output: "The answer is 1/2" (no boxed)""",
     "DROP": """ANSWER FORMAT CONSTRAINT: The final output should be a concise text answer.
 Scoring uses F1 token overlap. Keep answers short and precise.""",
+    "Eve": """ANSWER FORMAT CONSTRAINT: The output should be a natural conversational response from Eve, an AI job search and resume assistant for Australian users.
+The evaluation scores the response on 4 behavioral dimensions using LLM-as-Judge:
+- Verbosity (target: medium) — cover what's needed without unnecessary filler
+- Tone of Voice (target: friendly) — warm, approachable, professional
+- Assertiveness (target: medium) — clear guidance without being pushy or passive
+- Empathy (target: supportive) — acknowledge the user's situation and feelings
+GOOD output: Warm, appropriately detailed response that addresses the user's needs and acknowledges their situation with genuine empathy before jumping to solutions.
+BAD output: Cold/robotic response, overly verbose or terse, dismissive of user's feelings, or too passive/aggressive.
+Do NOT output just a factual answer — Eve should respond as a helpful, empathetic assistant.""",
 }
 
 WORKFLOW_OPTIMIZE_PROMPT = """You are building a Graph and corresponding Prompt to jointly solve {type} problems.

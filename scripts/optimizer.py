@@ -7,6 +7,7 @@ import asyncio
 import importlib
 import importlib.util
 import json
+import os
 import shutil
 import sys
 import time
@@ -33,7 +34,7 @@ from scripts.async_llm import create_llm_instance
 from scripts.formatter import XmlFormatter, FormatError
 from scripts.logs import logger
 
-QuestionType = Literal["math", "code", "qa"]
+QuestionType = Literal["math", "code", "qa", "open_ended"]
 OptimizerType = Literal["Graph", "Test"]
 
 
@@ -444,7 +445,10 @@ class Optimizer:
 
     async def _dry_run_graph(self, graph_class):
         """Run the graph on one validation sample to catch runtime errors early."""
-        dataset_path = f"data/datasets/{self.dataset.lower()}_validate.jsonl"
+        # Use train split if available; fall back to validate for legacy datasets
+        train_path = f"data/datasets/{self.dataset.lower()}_train.jsonl"
+        validate_path = f"data/datasets/{self.dataset.lower()}_validate.jsonl"
+        dataset_path = train_path if os.path.exists(train_path) else validate_path
         with open(dataset_path) as f:
             sample_data = json.loads(f.readline())
         workflow = graph_class(

@@ -114,7 +114,7 @@ def create_running_max_plot(val_df: pd.DataFrame, source: str = "val") -> go.Fig
 
 
 def create_cost_progression_plot(val_df: pd.DataFrame) -> go.Figure:
-    """Bar chart of total cost per round."""
+    """Bar chart of total cost per round (single split)."""
     fig = go.Figure()
 
     if not val_df.empty and "total_cost" in val_df.columns:
@@ -135,6 +135,43 @@ def create_cost_progression_plot(val_df: pd.DataFrame) -> go.Figure:
         template="plotly_white",
         height=PLOT_HEIGHT,
         xaxis=dict(dtick=1),
+    )
+    return fig
+
+
+def create_cost_all_splits_plot(
+    train_df: pd.DataFrame,
+    dev_df: Optional[pd.DataFrame] = None,
+    test_df: Optional[pd.DataFrame] = None,
+) -> go.Figure:
+    """Grouped bar chart of total cost per round across all partitions."""
+    fig = go.Figure()
+
+    for label, df, color in [
+        ("Train", train_df, COLORS["train"]),
+        ("Dev", dev_df, COLORS["dev"]),
+        ("Test", test_df, COLORS["test"]),
+    ]:
+        if df is not None and not df.empty and "total_cost" in df.columns:
+            fig.add_trace(
+                go.Bar(
+                    x=df["round"],
+                    y=df["total_cost"],
+                    name=label,
+                    marker_color=color,
+                    hovertemplate=f"<b>Round %{{x}}</b><br>{label}: $%{{y:.4f}}<extra></extra>",
+                )
+            )
+
+    fig.update_layout(
+        title="Cost per Round (All Partitions)",
+        xaxis_title="MCTS Round",
+        yaxis_title="Cost (USD)",
+        template="plotly_white",
+        height=PLOT_HEIGHT,
+        barmode="stack",
+        xaxis=dict(dtick=1),
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
     )
     return fig
 
@@ -258,23 +295,23 @@ def create_eve_dimension_comparison_bar(
         go.Bar(
             x=labels,
             y=baseline_vals,
-            name="Eve Baseline",
+            name="Eve App (GPT-4.1)",
             marker_color=COLORS["secondary"],
-            hovertemplate="<b>%{x}</b><br>Baseline: %{y:.1f}%<extra></extra>",
+            hovertemplate="<b>%{x}</b><br>Eve App: %{y:.1f}%<extra></extra>",
         )
     )
     fig.add_trace(
         go.Bar(
             x=labels,
             y=best_vals,
-            name="AFlow Best",
+            name="AFlow Best (GPT-4.1)",
             marker_color=COLORS["primary"],
-            hovertemplate="<b>%{x}</b><br>Best: %{y:.1f}%<extra></extra>",
+            hovertemplate="<b>%{x}</b><br>AFlow Best: %{y:.1f}%<extra></extra>",
         )
     )
 
     fig.update_layout(
-        title="Dimension Comparison",
+        title="Eve App (GPT-4.1) vs AFlow Best (GPT-4.1)",
         yaxis_title="Score (%)",
         template="plotly_white",
         height=PLOT_HEIGHT,
@@ -288,41 +325,78 @@ def create_val_vs_test_comparison(
     val_df: pd.DataFrame,
     test_df: pd.DataFrame,
 ) -> go.Figure:
-    """Grouped bar chart comparing validation vs test scores."""
-    # Find rounds present in both
-    common_rounds = sorted(
-        set(val_df["round"].tolist()) & set(test_df["round"].tolist())
-    )
+    """Grouped bar chart comparing validation vs test scores (legacy 2-split)."""
+    return create_split_comparison(val_df, None, test_df)
 
-    val_scores = []
-    test_scores = []
-    for r in common_rounds:
-        val_scores.append(val_df.loc[val_df["round"] == r, "score"].iloc[0] * 100)
-        test_scores.append(test_df.loc[test_df["round"] == r, "score"].iloc[0] * 100)
+
+def create_split_comparison(
+    train_df: pd.DataFrame,
+    dev_df: Optional[pd.DataFrame] = None,
+    test_df: Optional[pd.DataFrame] = None,
+) -> go.Figure:
+    """Grouped bar chart comparing train/dev/test scores across rounds."""
+    # Find rounds common to all available splits
+    common_rounds = set(train_df["round"].tolist())
+    if dev_df is not None and not dev_df.empty:
+        common_rounds &= set(dev_df["round"].tolist())
+    if test_df is not None and not test_df.empty:
+        common_rounds &= set(test_df["round"].tolist())
+    common_rounds = sorted(common_rounds)
+
+    round_labels = [f"Round {r}" for r in common_rounds]
 
     fig = go.Figure()
+
+    # Train
+    train_scores = [
+        train_df.loc[train_df["round"] == r, "score"].iloc[0] * 100
+        for r in common_rounds
+    ]
     fig.add_trace(
         go.Bar(
-            x=[f"Round {r}" for r in common_rounds],
-            y=val_scores,
-            name="Validation",
-            marker_color=COLORS["validation"],
-            hovertemplate="<b>%{x}</b><br>Val: %{y:.1f}%<extra></extra>",
-        )
-    )
-    fig.add_trace(
-        go.Bar(
-            x=[f"Round {r}" for r in common_rounds],
-            y=test_scores,
-            name="Test",
-            marker_color=COLORS["test"],
-            hovertemplate="<b>%{x}</b><br>Test: %{y:.1f}%<extra></extra>",
+            x=round_labels,
+            y=train_scores,
+            name="Train",
+            marker_color=COLORS["train"],
+            hovertemplate="<b>%{x}</b><br>Train: %{y:.1f}%<extra></extra>",
         )
     )
 
+    # Dev
+    if dev_df is not None and not dev_df.empty:
+        dev_scores = [
+            dev_df.loc[dev_df["round"] == r, "score"].iloc[0] * 100
+            for r in common_rounds
+        ]
+        fig.add_trace(
+            go.Bar(
+                x=round_labels,
+                y=dev_scores,
+                name="Dev",
+                marker_color=COLORS["dev"],
+                hovertemplate="<b>%{x}</b><br>Dev: %{y:.1f}%<extra></extra>",
+            )
+        )
+
+    # Test
+    if test_df is not None and not test_df.empty:
+        test_scores = [
+            test_df.loc[test_df["round"] == r, "score"].iloc[0] * 100
+            for r in common_rounds
+        ]
+        fig.add_trace(
+            go.Bar(
+                x=round_labels,
+                y=test_scores,
+                name="Test",
+                marker_color=COLORS["test"],
+                hovertemplate="<b>%{x}</b><br>Test: %{y:.1f}%<extra></extra>",
+            )
+        )
+
     fig.update_layout(
-        title="Validation vs Test Scores",
-        yaxis_title="F1 Score (%)",
+        title="Train / Dev / Test Scores",
+        yaxis_title="Score (%)",
         template="plotly_white",
         height=PLOT_HEIGHT,
         barmode="group",

@@ -5,20 +5,23 @@ description = "AFlow: Automating Agentic Workflow Generation"
 requires-python = ">=3.11"
 dependencies = [
     "aiofiles==24.1.0",
+    "deepeval==3.8.6",
     "httpx==0.28.1",
     "mpmath==1.3.0",
     "numpy>=2.4",
     "openai==1.82.0",
     "pandas==2.2.3",
     "pyaml==25.1.0",
-    "pydantic==2.11.5",
+    "pydantic>=2.11.7",
     "PyYAML==6.0.2",
     "regex==2024.11.6",
     "requests>=2.32.5",
     "sympy==1.14.0",
     "tenacity==9.1.2",
+    "tornado==6.5.5",
     "tqdm==4.67.1",
     "tree-sitter>=0.24",
+    "websockets>=16.0",
 ]
 
 [project.optional-dependencies]

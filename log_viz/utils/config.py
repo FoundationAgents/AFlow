@@ -27,22 +27,24 @@ COLORS = {
     "success": "#00C853",
     "warning": "#FFD600",
     "error": "#D50000",
+    "train": "#FF6F00",
     "validation": "#FF6F00",
+    "dev": "#00C853",
     "test": "#0091EA",
 }
 
-# Eve AICW dimension configuration
-EVE_DIMENSIONS = ["verbosity", "tone", "assertiveness", "empathy"]
+# Eve Persona Adherence dimension configuration
+EVE_DIMENSIONS = ["verbosity", "tone_of_voice", "assertiveness", "empathy"]
 EVE_BASELINE = {
     "verbosity": 0.871,
-    "tone": 0.870,
+    "tone_of_voice": 0.870,
     "assertiveness": 0.847,
     "empathy": 0.516,
     "score": 0.776,
 }
 EVE_DIMENSION_COLORS = {
     "verbosity": "#7B1FA2",
-    "tone": "#0091EA",
+    "tone_of_voice": "#0091EA",
     "assertiveness": "#FF6F00",
     "empathy": "#00C853",
     "score": "#D50000",

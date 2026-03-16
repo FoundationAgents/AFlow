@@ -14,6 +14,7 @@ from benchmarks.humaneval import HumanEvalBenchmark
 from benchmarks.math import MATHBenchmark
 from benchmarks.mbpp import MBPPBenchmark
 from benchmarks.livecodebench import LiveCodeBench
+from benchmarks.eve import EveBenchmark
 from benchmarks.strategyqa import StrategyQABenchmark
 
 # If you want to customize tasks, add task types here and provide evaluation functions, just like the ones given above
@@ -27,6 +28,7 @@ DatasetType = Literal[
     "LiveCodeBench",
     "StrategyQA",
     "ARC",
+    "Eve",
 ]
 
 
@@ -47,6 +49,7 @@ class Evaluator:
             "LiveCodeBench": LiveCodeBench,
             "StrategyQA": StrategyQABenchmark,
             "ARC": ARCBenchmark,
+            "Eve": EveBenchmark,
         }
 
     async def graph_evaluate(
@@ -81,4 +84,11 @@ class Evaluator:
 
     def _get_data_path(self, dataset: DatasetType, test: bool) -> str:
         base_path = f"data/datasets/{dataset.lower()}"
-        return f"{base_path}_test.jsonl" if test else f"{base_path}_validate.jsonl"
+        if test:
+            return f"{base_path}_test.jsonl"
+        # Use train split for optimization; fall back to validate for legacy datasets
+        train_path = f"{base_path}_train.jsonl"
+        validate_path = f"{base_path}_validate.jsonl"
+        import os
+
+        return train_path if os.path.exists(train_path) else validate_path

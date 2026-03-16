@@ -64,6 +64,11 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         question_type="qa",
         operators=["Custom", "AnswerGenerate", "ScEnsemble"],
     ),
+    "Eve": ExperimentConfig(
+        dataset="Eve",
+        question_type="open_ended",
+        operators=["Custom", "ScEnsemble"],
+    ),
 }
 
 

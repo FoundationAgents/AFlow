@@ -231,8 +231,15 @@ def _render_mermaid(mermaid_code: str, height: int = 500) -> None:
 def display_mcts_tree(
     tree_data: Dict,
     experiences: Optional[Dict[int, Dict]] = None,
+    dev_scores: Optional[Dict[int, float]] = None,
+    score_label: str = "Train",
 ) -> None:
-    """Render the MCTS search tree using Mermaid."""
+    """Render the MCTS search tree using Mermaid.
+
+    If dev_scores is provided, the node labels show dev scores and the best
+    node is determined by dev performance.  Otherwise, train scores from the
+    experience data are used.
+    """
     if not tree_data:
         st.info("No MCTS experience data available.")
         return
@@ -242,16 +249,23 @@ def display_mcts_tree(
         st.info("No tree nodes to display.")
         return
 
+    # Override scores with dev partition if provided
+    if dev_scores:
+        for rnd, s in dev_scores.items():
+            scores[rnd] = s
+        best_round = max(dev_scores, key=dev_scores.get) if dev_scores else best_round
+
     mermaid_code = _generate_mcts_mermaid(scores, best_round, edges)
     n_nodes = len(scores)
     diagram_height = max(300, n_nodes * 80 + 100)
     _render_mermaid(mermaid_code, height=diagram_height)
 
     # Legend
-    cols = st.columns(3)
+    cols = st.columns(4)
     cols[0].markdown(":green_heart: **Green edge** = Improved over parent")
     cols[1].markdown(":red_circle: **Red edge** = Regressed from parent")
     cols[2].markdown(":orange_heart: **Orange node** = Best round")
+    cols[3].markdown(f"Scores from **{score_label}** partition")
 
     # Modification details
     if experiences:
