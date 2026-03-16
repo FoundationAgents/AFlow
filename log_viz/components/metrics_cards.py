@@ -41,14 +41,23 @@ def _compute_duration(run_config: Dict) -> str:
         return "N/A"
 
 
-def display_metrics_cards(df: pd.DataFrame, run_config: Optional[Dict] = None) -> None:
+def display_metrics_cards(
+    df: pd.DataFrame,
+    run_config: Optional[Dict] = None,
+    baseline_score_override: Optional[float] = None,
+) -> None:
     """Display summary metrics in card format."""
     if df.empty:
         st.warning("No results available.")
         return
 
     best_score = df["score"].max()
-    baseline_score = df.iloc[0]["score"]
+    baseline_score = (
+        baseline_score_override
+        if baseline_score_override is not None
+        else df.iloc[0]["score"]
+    )
+    baseline_label = "R0" if baseline_score_override is not None else "R1"
     best_round = int(df.loc[df["score"].idxmax(), "round"])
     improvement = best_score - baseline_score
     run_id = _derive_run_id(df)
@@ -58,7 +67,7 @@ def display_metrics_cards(df: pd.DataFrame, run_config: Optional[Dict] = None) -
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Run ID", run_id)
     c2.metric("Best Score", f"{best_score:.1%}")
-    c3.metric("Baseline (R1)", f"{baseline_score:.1%}")
+    c3.metric(f"Baseline ({baseline_label})", f"{baseline_score:.1%}")
     c4.metric(
         "Improvement",
         f"+{improvement:.1%}",

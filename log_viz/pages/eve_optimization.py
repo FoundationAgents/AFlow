@@ -148,7 +148,7 @@ else:
     headline_label = "Train"
 
 best_score = headline_df["score"].max()
-baseline_score = headline_df.iloc[0]["score"]
+baseline_score = EVE_BASELINE["score"]
 improvement = best_score - baseline_score
 best_round = int(headline_df.loc[headline_df["score"].idxmax(), "round"])
 
@@ -156,7 +156,7 @@ st.caption(f"Headline metrics from **{headline_label}** partition")
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric(f"Best Score ({headline_label})", f"{best_score:.1%}")
-c2.metric(f"Baseline R1 ({headline_label})", f"{baseline_score:.1%}")
+c2.metric(f"Baseline R0 ({headline_label})", f"{baseline_score:.1%}")
 c3.metric(
     "Improvement",
     f"+{improvement:.1%}",
