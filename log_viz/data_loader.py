@@ -407,7 +407,26 @@ class AFlowDataLoader:
             if "score" in baseline_csv.columns:
                 baseline_csv["score"] = EVE_BASELINE.get("score", 0)
             if "prediction" in baseline_csv.columns:
-                baseline_csv["prediction"] = "(Eve app baseline)"
+                baseline_jsonl = Path("data/datasets/eve_validate_with_baseline.jsonl")
+                if baseline_jsonl.exists() and "user_message" in baseline_csv.columns:
+                    response_lookup = {}
+                    with open(baseline_jsonl) as f:
+                        for line in f:
+                            rec = json.loads(line)
+                            if rec.get("eve_baseline_response"):
+                                response_lookup[rec["user_message"]] = rec[
+                                    "eve_baseline_response"
+                                ]
+                    if response_lookup:
+                        baseline_csv["prediction"] = (
+                            baseline_csv["user_message"]
+                            .map(response_lookup)
+                            .fillna("(Eve app baseline)")
+                        )
+                    else:
+                        baseline_csv["prediction"] = "(Eve app baseline)"
+                else:
+                    baseline_csv["prediction"] = "(Eve app baseline)"
         else:
             baseline_csv = self.load_round_csv(dataset, baseline_round, split=split)
         if baseline_csv is None:
