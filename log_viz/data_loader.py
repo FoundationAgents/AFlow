@@ -411,7 +411,7 @@ class AFlowDataLoader:
                     PROJECT_ROOT
                     / "data"
                     / "datasets"
-                    / "eve_validate_with_baseline.jsonl"
+                    / f"eve_{split}_with_baseline.jsonl"
                 )
                 if baseline_jsonl.exists() and "user_message" in baseline_csv.columns:
                     response_lookup = {}
