@@ -407,7 +407,12 @@ class AFlowDataLoader:
             if "score" in baseline_csv.columns:
                 baseline_csv["score"] = EVE_BASELINE.get("score", 0)
             if "prediction" in baseline_csv.columns:
-                baseline_jsonl = Path("data/datasets/eve_validate_with_baseline.jsonl")
+                baseline_jsonl = (
+                    PROJECT_ROOT
+                    / "data"
+                    / "datasets"
+                    / "eve_validate_with_baseline.jsonl"
+                )
                 if baseline_jsonl.exists() and "user_message" in baseline_csv.columns:
                     response_lookup = {}
                     with open(baseline_jsonl) as f:

@@ -64,6 +64,6 @@ def display_predictions(
 
     st.dataframe(
         display_df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )

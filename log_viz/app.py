@@ -73,13 +73,13 @@ st.divider()
 col1, col2, col3 = st.columns(3)
 with col1:
     fig = create_score_progression_plot(display_df, source=source)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 with col2:
     fig = create_running_max_plot(display_df, source=source)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 with col3:
     fig = create_cost_progression_plot(display_df)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 st.divider()
 

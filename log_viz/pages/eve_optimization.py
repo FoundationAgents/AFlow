@@ -206,7 +206,7 @@ if has_dimensions:
         fig = create_eve_dimension_progression(
             dim_df, source=dim_source.lower(), baseline=EVE_BASELINE
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     with col2:
         # Build best_scores dict from the best round's dimension data
         best_scores = {}
@@ -219,10 +219,10 @@ if has_dimensions:
                 if dim in best_round_dims.columns:
                     best_scores[dim] = best_round_dims.iloc[0][dim]
         fig = create_eve_dimension_comparison_bar(EVE_BASELINE, best_scores)
-        st.plotly_chart(fig, use_container_width=True, key="dim_comparison_section2")
+        st.plotly_chart(fig, width="stretch", key="dim_comparison_section2")
     with col3:
         fig = create_cost_all_splits_plot(train_df, dev_df, test_df)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 else:
     # Fallback: show overall score progression + cost only
     from plots import create_score_progression_plot
@@ -231,10 +231,10 @@ else:
     col1, col2 = st.columns(2)
     with col1:
         fig = create_score_progression_plot(headline_df, source=chart_source.lower())
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     with col2:
         fig = create_cost_all_splits_plot(train_df, dev_df, test_df)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 st.divider()
 
@@ -250,7 +250,7 @@ if has_dev or has_test:
     fig = create_split_comparison(
         train_df, dev_df, test_df, baseline_score=EVE_BASELINE.get("score")
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     st.divider()
 
@@ -429,7 +429,7 @@ if has_dimensions:
                 best_scores[dim] = best_round_dims.iloc[0][dim]
 
     fig = create_eve_dimension_comparison_bar(EVE_BASELINE, best_scores)
-    st.plotly_chart(fig, use_container_width=True, key="dim_comparison_section6")
+    st.plotly_chart(fig, width="stretch", key="dim_comparison_section6")
 
     # Sample-level comparison table (if CSV data available for best round)
     best_csv = loader.load_round_csv(dataset, best_round)
@@ -450,86 +450,90 @@ if has_dimensions:
             if col in display_csv.columns:
                 display_csv[col] = display_csv[col].astype(str).str[:200]
 
-        st.dataframe(display_csv, use_container_width=True, hide_index=True)
+        st.dataframe(display_csv, width="stretch", hide_index=True)
 
     st.divider()
 
 # --- Section 6b: Most Improved Example per Dimension ---
-baseline_round = 0  # Eve app baseline (R0)
-# Use dev split to pick the best round per dimension and show dev examples
-best_rounds_per_dim = loader.find_best_round_per_dimension(dataset, split="dev")
-if best_rounds_per_dim:
-    improved_per_dim = loader.find_most_improved_per_dimension(
-        dataset,
-        baseline_round,
-        split="dev",
-        best_rounds_per_dim=best_rounds_per_dim,
-    )
-    # Filter to dimensions that actually improved
-    # v is a dict keyed by turn count {1: {...}, 2: {...}, ...}
-    shown_dims = {
-        d: v
-        for d, v in improved_per_dim.items()
-        if v and isinstance(v, dict) and any(ex["delta"] > 0 for ex in v.values())
-    }
-    if shown_dims:
-        st.subheader("Most Improved Example per Dimension")
-        st.caption(
-            "Best round per dimension selected on **Dev**, examples shown from **Dev**"
+try:
+    baseline_round = 0  # Eve app baseline (R0)
+    # Use dev split to pick the best round per dimension and show dev examples
+    best_rounds_per_dim = loader.find_best_round_per_dimension(dataset, split="dev")
+    if best_rounds_per_dim:
+        improved_per_dim = loader.find_most_improved_per_dimension(
+            dataset,
+            baseline_round,
+            split="dev",
+            best_rounds_per_dim=best_rounds_per_dim,
         )
+        # Filter to dimensions that actually improved
+        # v is a dict keyed by turn count {1: {...}, 2: {...}, ...}
+        shown_dims = {
+            d: v
+            for d, v in improved_per_dim.items()
+            if v and isinstance(v, dict) and any(ex["delta"] > 0 for ex in v.values())
+        }
+        if shown_dims:
+            st.subheader("Most Improved Example per Dimension")
+            st.caption(
+                "Best round per dimension selected on **Dev**, examples shown from **Dev**"
+            )
 
-        dim_tabs = st.tabs([d.replace("_", " ").title() for d in shown_dims])
-        for tab, (dim, turn_examples) in zip(dim_tabs, shown_dims.items()):
-            with tab:
-                criteria = DIMENSION_CRITERIA.get(dim, "")
-                if criteria:
-                    st.info(f"**Scoring Criteria:** {criteria}")
+            dim_tabs = st.tabs([d.replace("_", " ").title() for d in shown_dims])
+            for tab, (dim, turn_examples) in zip(dim_tabs, shown_dims.items()):
+                with tab:
+                    criteria = DIMENSION_CRITERIA.get(dim, "")
+                    if criteria:
+                        st.info(f"**Scoring Criteria:** {criteria}")
 
-                # Let user select turn count
-                available_turns = sorted(turn_examples.keys())
-                turn_labels = {t: f"{t}-turn" for t in available_turns}
-                selected_turns = st.radio(
-                    "Conversation length",
-                    available_turns,
-                    format_func=lambda t: turn_labels[t],
-                    horizontal=True,
-                    key=f"turns_{dim}",
-                )
-
-                info = turn_examples[selected_turns]
-
-                mc1, mc2, mc3, mc4 = st.columns(4)
-                mc1.metric("Best Round (Dev)", f"R{info['best_round']}")
-                mc2.metric(
-                    f"R{baseline_round} {dim.replace('_', ' ').title()}",
-                    f"{info['dim_baseline']:.1%}",
-                )
-                mc3.metric(
-                    f"R{info['best_round']} {dim.replace('_', ' ').title()}",
-                    f"{info['dim_best']:.1%}",
-                )
-                mc4.metric(
-                    "Dimension Delta",
-                    f"{info['delta']:+.1%}",
-                )
-
-                # Show full conversation: context (prior turns) + current user message
-                context = info.get("context", "")
-                if context:
-                    st.markdown("**Conversation History**")
-                    _render_context_chat_bubbles(context)
-
-                st.markdown("**Current User Message**")
-                st.chat_message("user").write(info["user_message"][:1000])
-
-                col_b, col_t = st.columns(2)
-                with col_b:
-                    st.markdown(f"**Round {baseline_round} Response**")
-                    st.chat_message("assistant").write(
-                        info["prediction_baseline"][:2000]
+                    # Let user select turn count
+                    available_turns = sorted(turn_examples.keys())
+                    turn_labels = {t: f"{t}-turn" for t in available_turns}
+                    selected_turns = st.radio(
+                        "Conversation length",
+                        available_turns,
+                        format_func=lambda t: turn_labels[t],
+                        horizontal=True,
+                        key=f"turns_{dim}",
                     )
-                with col_t:
-                    st.markdown(f"**Round {info['best_round']} Response**")
-                    st.chat_message("assistant").write(info["prediction_best"][:2000])
 
-        st.divider()
+                    info = turn_examples[selected_turns]
+
+                    mc1, mc2, mc3, mc4 = st.columns(4)
+                    mc1.metric("Best Round (Dev)", f"R{info['best_round']}")
+                    mc2.metric(
+                        f"R{baseline_round} {dim.replace('_', ' ').title()}",
+                        f"{info['dim_baseline']:.1%}",
+                    )
+                    mc3.metric(
+                        f"R{info['best_round']} {dim.replace('_', ' ').title()}",
+                        f"{info['dim_best']:.1%}",
+                    )
+                    mc4.metric(
+                        "Dimension Delta",
+                        f"{info['delta']:+.1%}",
+                    )
+
+                    # Show full conversation: context (prior turns) + current user message
+                    context = info.get("context", "")
+                    if context:
+                        st.markdown("**Conversation History**")
+                        _render_context_chat_bubbles(context)
+
+                    st.markdown("**Current User Message**")
+                    st.chat_message("user").write(info["user_message"][:1000])
+
+                    col_b, col_t = st.columns(2)
+                    with col_b:
+                        st.markdown(f"**Round {baseline_round} Response**")
+                        st.chat_message("assistant").write(
+                            info["prediction_baseline"][:2000]
+                        )
+                    with col_t:
+                        st.markdown(f"**Round {info['best_round']} Response**")
+                        st.chat_message("assistant").write(
+                            info["prediction_best"][:2000]
+                        )
+except Exception as e:
+    st.error(f"Error rendering Most Improved section: {e}")
+    st.exception(e)
