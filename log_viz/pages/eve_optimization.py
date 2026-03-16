@@ -203,7 +203,9 @@ if has_dimensions:
     st.caption(f"Dimension charts from **{dim_source}** partition")
     col1, col2, col3 = st.columns(3)
     with col1:
-        fig = create_eve_dimension_progression(dim_df, source=dim_source.lower())
+        fig = create_eve_dimension_progression(
+            dim_df, source=dim_source.lower(), baseline=EVE_BASELINE
+        )
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         # Build best_scores dict from the best round's dimension data
@@ -245,7 +247,9 @@ if has_dev or has_test:
     st.subheader("Train / Dev / Test Generalization")
 
     # Grouped bar chart
-    fig = create_split_comparison(train_df, dev_df, test_df)
+    fig = create_split_comparison(
+        train_df, dev_df, test_df, baseline_score=EVE_BASELINE.get("score")
+    )
     st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
@@ -378,6 +382,7 @@ if tree_data:
         experiences,
         dev_scores=dev_round_scores,
         score_label="Dev" if dev_round_scores else "Train",
+        baseline_score=EVE_BASELINE.get("score"),
     )
     st.divider()
 
@@ -450,14 +455,14 @@ if has_dimensions:
     st.divider()
 
 # --- Section 6b: Most Improved Example per Dimension ---
-baseline_round = int(headline_df["round"].iloc[0])
-# Use dev split to pick the best round per dimension, then show test examples
+baseline_round = 0  # Eve app baseline (R0)
+# Use dev split to pick the best round per dimension and show dev examples
 best_rounds_per_dim = loader.find_best_round_per_dimension(dataset, split="dev")
 if best_rounds_per_dim:
     improved_per_dim = loader.find_most_improved_per_dimension(
         dataset,
         baseline_round,
-        split="test",
+        split="dev",
         best_rounds_per_dim=best_rounds_per_dim,
     )
     # Filter to dimensions that actually improved
@@ -470,7 +475,7 @@ if best_rounds_per_dim:
     if shown_dims:
         st.subheader("Most Improved Example per Dimension")
         st.caption(
-            "Best round per dimension selected on **Dev**, examples shown from **Test**"
+            "Best round per dimension selected on **Dev**, examples shown from **Dev**"
         )
 
         dim_tabs = st.tabs([d.replace("_", " ").title() for d in shown_dims])
