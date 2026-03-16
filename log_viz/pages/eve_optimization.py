@@ -402,13 +402,10 @@ if wf_rounds:
                     f"{exp.get('modification', '')}"
                 )
 
-            col_diagram, col_code = st.columns([1, 2])
-            with col_diagram:
-                st.markdown("**Structure**")
-                display_workflow_diagram_single(loader, dataset, r)
-            with col_code:
-                st.markdown("**Code**")
-                display_workflow_code_single(loader, dataset, r)
+            st.markdown("**Structure**")
+            display_workflow_diagram_single(loader, dataset, r)
+            st.markdown("**Code**")
+            display_workflow_code_single(loader, dataset, r)
     st.divider()
 
 # --- Section 6: Comparison View ---
