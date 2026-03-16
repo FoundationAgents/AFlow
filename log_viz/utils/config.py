@@ -42,6 +42,15 @@ EVE_BASELINE = {
     "empathy": 0.516,
     "score": 0.776,
 }
+# Shared legend style — horizontal, centred below the X axis
+LEGEND_BELOW = dict(
+    orientation="h",
+    yanchor="top",
+    y=-0.18,
+    xanchor="center",
+    x=0.5,
+)
+
 EVE_DIMENSION_COLORS = {
     "verbosity": "#7B1FA2",
     "tone_of_voice": "#0091EA",

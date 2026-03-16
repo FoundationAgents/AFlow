@@ -5,7 +5,13 @@ from typing import Dict, Optional
 import pandas as pd
 import plotly.graph_objects as go
 
-from utils.config import COLORS, EVE_DIMENSION_COLORS, EVE_DIMENSIONS, PLOT_HEIGHT
+from utils.config import (
+    COLORS,
+    EVE_DIMENSION_COLORS,
+    EVE_DIMENSIONS,
+    LEGEND_BELOW,
+    PLOT_HEIGHT,
+)
 
 
 def create_score_progression_plot(
@@ -64,8 +70,9 @@ def create_score_progression_plot(
         yaxis_title=f"Score — {split_label} (%)",
         template="plotly_white",
         height=PLOT_HEIGHT,
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        legend=LEGEND_BELOW,
         xaxis=dict(dtick=1),
+        margin=dict(b=80),
     )
     return fig
 
@@ -107,8 +114,9 @@ def create_running_max_plot(val_df: pd.DataFrame, source: str = "val") -> go.Fig
         yaxis_title=f"Score — {split_label} (%)",
         template="plotly_white",
         height=PLOT_HEIGHT,
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        legend=LEGEND_BELOW,
         xaxis=dict(dtick=1),
+        margin=dict(b=80),
     )
     return fig
 
@@ -171,7 +179,8 @@ def create_cost_all_splits_plot(
         height=PLOT_HEIGHT,
         barmode="stack",
         xaxis=dict(dtick=1),
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        legend=LEGEND_BELOW,
+        margin=dict(b=80),
     )
     return fig
 
@@ -234,8 +243,9 @@ def create_eve_dimension_progression(
         yaxis_title=f"Score — {split_label} (%)",
         template="plotly_white",
         height=PLOT_HEIGHT,
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        legend=LEGEND_BELOW,
         xaxis=dict(dtick=1),
+        margin=dict(b=80),
     )
     return fig
 
@@ -285,7 +295,7 @@ def create_eve_radar_chart(
         polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
         template="plotly_white",
         height=PLOT_HEIGHT,
-        legend=dict(yanchor="top", y=1.1, xanchor="left", x=0.01),
+        legend=LEGEND_BELOW,
     )
     return fig
 
@@ -327,7 +337,8 @@ def create_eve_dimension_comparison_bar(
         template="plotly_white",
         height=PLOT_HEIGHT,
         barmode="group",
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        legend=LEGEND_BELOW,
+        margin=dict(b=80),
     )
     return fig
 
@@ -422,6 +433,7 @@ def create_split_comparison(
         template="plotly_white",
         height=PLOT_HEIGHT,
         barmode="group",
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        legend=LEGEND_BELOW,
+        margin=dict(b=80),
     )
     return fig
