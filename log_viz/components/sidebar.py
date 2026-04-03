@@ -79,8 +79,11 @@ def render_sidebar(loader: AFlowDataLoader) -> Dict[str, Any]:
             with st.expander("Available Operators"):
                 for name, info in operators.items():
                     st.markdown(f"**{name}**")
-                    st.caption(info.get("description", ""))
-                    st.code(info.get("interface", ""), language="python")
+                    if isinstance(info, dict):
+                        st.caption(info.get("description", ""))
+                        st.code(info.get("interface", ""), language="python")
+                    else:
+                        st.caption(str(info))
 
         st.divider()
 

@@ -37,8 +37,9 @@ class Evaluator:
     Complete the evaluation for different datasets here
     """
 
-    def __init__(self, eval_path: str):
+    def __init__(self, eval_path: str, data_path: str = "data/datasets"):
         self.eval_path = eval_path
+        self.data_path = data_path
         self.dataset_configs: Dict[DatasetType, BaseBenchmark] = {
             "GSM8K": GSM8KBenchmark,
             "MATH": MATHBenchmark,
@@ -83,12 +84,11 @@ class Evaluator:
         return graph(name=dataset, llm_config=llm_config, dataset=dataset_config)
 
     def _get_data_path(self, dataset: DatasetType, test: bool) -> str:
-        base_path = f"data/datasets/{dataset.lower()}"
-        if test:
-            return f"{base_path}_test.jsonl"
-        # Use train split for optimization; fall back to validate for legacy datasets
-        train_path = f"{base_path}_train.jsonl"
-        validate_path = f"{base_path}_validate.jsonl"
         import os
 
+        base_path = f"{self.data_path}/{dataset.lower()}"
+        if test:
+            return f"{base_path}_test.jsonl"
+        train_path = f"{base_path}_train.jsonl"
+        validate_path = f"{base_path}_validate.jsonl"
         return train_path if os.path.exists(train_path) else validate_path

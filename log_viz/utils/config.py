@@ -1,14 +1,21 @@
 """Configuration constants for the AFlow visualization dashboard."""
 
+import os
 from pathlib import Path
 
 # Paths
 BASE_DIR = Path(__file__).parent.parent
 PROJECT_ROOT = BASE_DIR.parent
-WORKSPACE_DIR = PROJECT_ROOT / "workspace"
+
+# Workspace resolution: AFLOW_WORKSPACE env var > PROJECT_ROOT (package location)
+# The aflow-dashboard CLI sets AFLOW_WORKSPACE to the desired root.
+_env_ws = os.environ.get("AFLOW_WORKSPACE")
+_ws_root = Path(_env_ws).resolve() if _env_ws else PROJECT_ROOT
+
+WORKSPACE_DIR = _ws_root / "workspace"
 WORKSPACE_DIRS = [
-    PROJECT_ROOT / d
-    for d in sorted(PROJECT_ROOT.iterdir())
+    _ws_root / d.name
+    for d in sorted(_ws_root.iterdir())
     if d.is_dir() and d.name.startswith("workspace")
 ]
 

@@ -42,11 +42,15 @@ For custom tasks, you can reference the code in the `benchmark` folder. Inherit 
 
 1. Set up the Python environment:
    ```bash
-   # Create and activate a Python 3.9 virtual environment
-   conda create -n <your_env_name> python=3.9
+   # Create and activate a Python 3.11+ virtual environment
+   python3 -m venv .venv
+   source .venv/bin/activate
 
-   # Install dependencies
-   pip install -r requirements.txt
+   # Install as editable package (use from this repo)
+   pip install -e ".[viz]"
+
+   # Or install into another project's environment
+   pip install -e /path/to/AFlow
    ```
 
 2. Configure optimization parameters:

@@ -1,7 +1,11 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "aflow"
+name = "fsai-aflow"
 version = "0.1.0"
-description = "AFlow: Automating Agentic Workflow Generation"
+description = "AFlow: Automating Agentic Workflow Generation (FSAI fork)"
 requires-python = ">=3.11"
 dependencies = [
     "aiofiles==24.1.0",
@@ -32,6 +36,14 @@ viz = [
 dev = [
     "pytest>=8.0",
 ]
+
+[project.scripts]
+aflow-dashboard = "aflow.dashboard:main"
+
+[tool.setuptools.packages.find]
+namespaces = true
+include = ["aflow", "scripts*", "benchmarks*", "log_viz*", "data*"]
+exclude = ["workspace*", "workspace_pilot2*", "tests*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

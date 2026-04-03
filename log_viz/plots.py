@@ -369,14 +369,23 @@ def create_split_comparison(
             test_df = pd.concat([r0_row, test_df], ignore_index=True)
 
     # Find rounds common to all available splits
-    common_rounds = set(train_df["round"].tolist())
-    if dev_df is not None and not dev_df.empty:
-        common_rounds &= set(dev_df["round"].tolist())
-    if test_df is not None and not test_df.empty:
-        common_rounds &= set(test_df["round"].tolist())
-    common_rounds = sorted(common_rounds)
+    if train_df is None or train_df.empty or "round" not in train_df.columns:
+        common_rounds = []
+    else:
+        common_rounds = set(train_df["round"].tolist())
+        if dev_df is not None and not dev_df.empty and "round" in dev_df.columns:
+            common_rounds &= set(dev_df["round"].tolist())
+        if test_df is not None and not test_df.empty and "round" in test_df.columns:
+            common_rounds &= set(test_df["round"].tolist())
+        common_rounds = sorted(common_rounds)
 
     round_labels = [f"Round {r}" for r in common_rounds]
+
+    if not common_rounds:
+        # Return empty figure if no data
+        fig = go.Figure()
+        fig.add_annotation(text="No data available for comparison", showarrow=False)
+        return fig
 
     fig = go.Figure()
 

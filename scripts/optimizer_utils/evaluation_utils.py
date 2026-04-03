@@ -2,15 +2,15 @@ from scripts.evaluator import Evaluator
 
 
 class EvaluationUtils:
-    def __init__(self, root_path: str):
+    def __init__(self, root_path: str, data_path: str = "data/datasets"):
         self.root_path = root_path
+        self.data_path = data_path
 
     async def evaluate_initial_round(
         self, optimizer, graph_path, directory, validation_n, data
     ):
-        # Load graph with graph_utils from optimizer
-        optimizer.graph = optimizer.graph_utils.load_graph(optimizer.round, graph_path)
-        evaluator = Evaluator(eval_path=directory)
+        optimizer.graph = optimizer._load_graph_fresh(optimizer.round, graph_path)
+        evaluator = Evaluator(eval_path=directory, data_path=self.data_path)
 
         for i in range(validation_n):
             score, avg_cost, total_cost = await evaluator.graph_evaluate(
@@ -37,7 +37,7 @@ class EvaluationUtils:
     async def evaluate_graph(
         self, optimizer, directory, validation_n, data, initial=False
     ):
-        evaluator = Evaluator(eval_path=directory)
+        evaluator = Evaluator(eval_path=directory, data_path=self.data_path)
         sum_score = 0
 
         for i in range(validation_n):
@@ -69,7 +69,7 @@ class EvaluationUtils:
         return sum_score / validation_n
 
     async def evaluate_graph_test(self, optimizer, directory, is_test=True):
-        evaluator = Evaluator(eval_path=directory)
+        evaluator = Evaluator(eval_path=directory, data_path=self.data_path)
         return await evaluator.graph_evaluate(
             optimizer.dataset,
             optimizer.graph,
