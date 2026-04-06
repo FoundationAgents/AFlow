@@ -63,6 +63,7 @@ class Optimizer:
         initial_round: int = 1,
         max_rounds: int = 20,
         validation_rounds: int = 5,
+        data_path: str = "data/datasets",
     ) -> None:
         self.optimize_llm_config = opt_llm_config
         self.optimize_llm = (
@@ -73,6 +74,7 @@ class Optimizer:
         self.dataset = dataset
         self.type = question_type
         self.check_convergence = check_convergence
+        self.data_path = data_path
 
         self.graph = None
         self.operators = operators
@@ -87,7 +89,7 @@ class Optimizer:
         self.graph_utils = GraphUtils(self.root_path)
         self.data_utils = DataUtils(self.root_path)
         self.experience_utils = ExperienceUtils(self.root_path)
-        self.evaluation_utils = EvaluationUtils(self.root_path)
+        self.evaluation_utils = EvaluationUtils(self.root_path, data_path=data_path)
         self.convergence_utils = ConvergenceUtils(self.root_path)
 
     def _build_run_config(self, mode: str, test_rounds=None) -> RunConfig:
@@ -118,8 +120,12 @@ class Optimizer:
             mcts_alpha=DataUtils.DEFAULT_ALPHA,
             mcts_lambda=DataUtils.DEFAULT_LAMBDA,
             log_samples=DataUtils.DEFAULT_LOG_SAMPLES,
-            valset_size=DataUtils.get_dataset_size(self.dataset, "validate"),
-            testset_size=DataUtils.get_dataset_size(self.dataset, "test"),
+            valset_size=DataUtils.get_dataset_size(
+                self.dataset, "validate", self.data_path
+            ),
+            testset_size=DataUtils.get_dataset_size(
+                self.dataset, "test", self.data_path
+            ),
             started_at=datetime.now(timezone.utc).isoformat(),
             test_rounds=test_rounds,
         )
@@ -231,8 +237,7 @@ class Optimizer:
 
         if self.round == 1:
             directory = self.graph_utils.create_round_directory(graph_path, self.round)
-            # Load graph using graph_utils
-            self.graph = self.graph_utils.load_graph(self.round, graph_path)
+            self.graph = self._load_graph_fresh(self.round, graph_path)
             avg_score = await self.evaluation_utils.evaluate_graph(
                 self, directory, validation_n, data, initial=True
             )
@@ -369,60 +374,87 @@ class Optimizer:
         file path rather than __import__, which has deep internal caching that
         persists even after sys.modules eviction and importlib.invalidate_caches().
 
-        Key subtlety: WORKFLOW_TEMPLATE hardcodes the import path as
-        ``workspace.{dataset}.workflows.round_N.prompt``, regardless of the
-        actual workspace directory (e.g. workspace_pilot2/).  We must register
-        the freshly-loaded prompt module under that template import name so
-        that graph.py's import statement finds it.
+        WORKFLOW_TEMPLATE hardcodes imports as ``workspace.{dataset}.workflows.*``,
+        regardless of the actual optimized_path.  We register the full package
+        hierarchy (workspace -> dataset -> workflows -> template/round_N) so that
+        graph.py's import statements resolve even when cwd is outside AFlow.
         """
         round_dir = Path(graph_path) / f"round_{round_number}"
 
-        # Delete __pycache__ to prevent bytecode reuse
         pycache_dir = round_dir / "__pycache__"
         if pycache_dir.exists():
             shutil.rmtree(pycache_dir)
         importlib.invalidate_caches()
 
-        # The graph.py template always imports:
-        #   import workspace.{dataset}.workflows.round_N.prompt as prompt_custom
-        # We must register the prompt module under this exact name.
+        # --- Canonical import names used by WORKFLOW_TEMPLATE ---
         template_base = f"workspace.{self.dataset}.workflows"
         template_prompt_name = f"{template_base}.round_{round_number}.prompt"
         template_round_name = f"{template_base}.round_{round_number}"
+        template_operator_name = f"{template_base}.template.operator"
+        template_template_name = f"{template_base}.template"
 
-        # Also compute the actual module path for graph (used for loading)
         actual_base = graph_path.replace("\\", ".").replace("/", ".")
         actual_graph_name = f"{actual_base}.round_{round_number}.graph"
         actual_prompt_name = f"{actual_base}.round_{round_number}.prompt"
         actual_round_name = f"{actual_base}.round_{round_number}"
 
-        # Evict stale modules under both actual and template paths
         for name in (
             actual_graph_name,
             actual_prompt_name,
             actual_round_name,
             template_prompt_name,
             template_round_name,
+            template_operator_name,
+            template_template_name,
         ):
             sys.modules.pop(name, None)
 
-        # Create the round_N package module so Python's import chain can
-        # resolve "workspace.{dataset}.workflows.round_N.prompt".
-        # Without this, Python fails to find round_N as a sub-package of
-        # workspace.{dataset}.workflows when the actual files live elsewhere.
+        # --- Register workspace package hierarchy ---
+        # graph.py does "import workspace.{dataset}.workflows.template.operator"
+        # All ancestor packages must exist in sys.modules for this to resolve.
+        workflows_dir = Path(graph_path)
+        dataset_dir = workflows_dir.parent
+        workspace_dir = dataset_dir.parent
+
+        for pkg_name, pkg_path in [
+            ("workspace", str(workspace_dir)),
+            (f"workspace.{self.dataset}", str(dataset_dir)),
+            (template_base, str(workflows_dir)),
+        ]:
+            if pkg_name not in sys.modules:
+                pkg = types.ModuleType(pkg_name)
+                pkg.__path__ = [pkg_path]
+                pkg.__package__ = pkg_name
+                sys.modules[pkg_name] = pkg
+
+        workflows_module = sys.modules[template_base]
+
+        # --- Register template/operator ---
+        template_dir = workflows_dir / "template"
+        if template_dir.exists():
+            tmpl_pkg = types.ModuleType(template_template_name)
+            tmpl_pkg.__path__ = [str(template_dir)]
+            tmpl_pkg.__package__ = template_template_name
+            sys.modules[template_template_name] = tmpl_pkg
+            workflows_module.template = tmpl_pkg
+
+            operator_file = template_dir / "operator.py"
+            if operator_file.exists():
+                op_spec = importlib.util.spec_from_file_location(
+                    template_operator_name, str(operator_file)
+                )
+                op_module = importlib.util.module_from_spec(op_spec)
+                sys.modules[template_operator_name] = op_module
+                op_spec.loader.exec_module(op_module)
+                tmpl_pkg.operator = op_module
+
+        # --- Register round_N package and prompt module ---
         round_pkg = types.ModuleType(template_round_name)
         round_pkg.__path__ = [str(round_dir)]
         round_pkg.__package__ = template_round_name
         sys.modules[template_round_name] = round_pkg
+        setattr(workflows_module, f"round_{round_number}", round_pkg)
 
-        # Also set round_N as an attribute on the parent workflows package
-        # so "import workspace.{dataset}.workflows.round_N" resolves
-        workflows_module = sys.modules.get(template_base)
-        if workflows_module is not None:
-            setattr(workflows_module, f"round_{round_number}", round_pkg)
-
-        # Load prompt from actual file, register under the template import name
-        # so that graph.py's "import workspace.{dataset}..." finds our fresh copy
         prompt_file = round_dir / "prompt.py"
         prompt_spec = importlib.util.spec_from_file_location(
             template_prompt_name, str(prompt_file)
@@ -432,7 +464,7 @@ class Optimizer:
         prompt_spec.loader.exec_module(prompt_module)
         round_pkg.prompt = prompt_module
 
-        # Load graph module from actual file path
+        # --- Load graph module ---
         graph_file = round_dir / "graph.py"
         graph_spec = importlib.util.spec_from_file_location(
             actual_graph_name, str(graph_file)
@@ -446,8 +478,8 @@ class Optimizer:
     async def _dry_run_graph(self, graph_class):
         """Run the graph on one validation sample to catch runtime errors early."""
         # Use train split if available; fall back to validate for legacy datasets
-        train_path = f"data/datasets/{self.dataset.lower()}_train.jsonl"
-        validate_path = f"data/datasets/{self.dataset.lower()}_validate.jsonl"
+        train_path = f"{self.data_path}/{self.dataset.lower()}_train.jsonl"
+        validate_path = f"{self.data_path}/{self.dataset.lower()}_validate.jsonl"
         dataset_path = train_path if os.path.exists(train_path) else validate_path
         with open(dataset_path) as f:
             sample_data = json.loads(f.readline())

@@ -7,3 +7,6 @@ optimized
 *.pyc
 /workspace
 *.json
+.venv/
+.deepeval/
+*.egg-info/

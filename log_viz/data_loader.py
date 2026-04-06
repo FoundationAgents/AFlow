@@ -8,6 +8,13 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import streamlit as st
+import sys
+from pathlib import Path
+
+# Add log_viz to path if not already there
+log_viz_path = str(Path(__file__).parent)
+if log_viz_path not in sys.path:
+    sys.path.insert(0, log_viz_path)
 
 from utils.config import (
     CACHE_TTL_DATASETS,
@@ -40,6 +47,7 @@ class AFlowDataLoader:
         """Discover datasets across all workspace directories.
 
         Returns labels like 'HotpotQA' or 'HotpotQA (workspace_v2)'.
+        Also includes datasets with only test results (like EVE).
         """
         datasets = []
         for ws_dir in WORKSPACE_DIRS:
@@ -47,11 +55,13 @@ class AFlowDataLoader:
                 continue
             suffix = "" if ws_dir.name == "workspace" else f" ({ws_dir.name})"
             for d in sorted(ws_dir.iterdir()):
-                results_path = d / "workflows" / "results.json"
-                if (
-                    d.is_dir()
-                    and results_path.exists()
-                    and results_path.stat().st_size > 0
+                # Check for main results
+                main_results = d / "workflows" / "results.json"
+                test_results = d / "workflows_test" / "results.json"
+
+                if d.is_dir() and (
+                    (main_results.exists() and main_results.stat().st_size > 0)
+                    or (test_results.exists() and test_results.stat().st_size > 0)
                 ):
                     datasets.append(f"{d.name}{suffix}")
         return datasets
@@ -218,7 +228,10 @@ class AFlowDataLoader:
             return pd.DataFrame()
         combined = pd.concat(frames, ignore_index=True)
         if "time" in combined.columns:
-            combined["time"] = pd.to_datetime(combined["time"])
+            # Handle timestamps with microseconds and ISO format
+            combined["time"] = pd.to_datetime(
+                combined["time"], format="ISO8601", errors="coerce"
+            )
         return combined
 
     @staticmethod

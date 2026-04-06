@@ -243,14 +243,19 @@ st.divider()
 has_dev = dev_df is not None and not dev_df.empty
 has_test = test_df is not None and not test_df.empty
 
-if has_dev or has_test:
+if (train_df is not None and not train_df.empty) or has_dev or has_test:
     st.subheader("Train / Dev / Test Generalization")
 
     # Grouped bar chart
-    fig = create_split_comparison(
-        train_df, dev_df, test_df, baseline_score=EVE_BASELINE.get("score")
-    )
-    st.plotly_chart(fig, width="stretch")
+    if train_df is not None and not train_df.empty and "round" in train_df.columns:
+        fig = create_split_comparison(
+            train_df, dev_df, test_df, baseline_score=EVE_BASELINE.get("score")
+        )
+        st.plotly_chart(fig, width="stretch")
+    else:
+        st.info(
+            "Not enough data for split comparison yet. Run more optimization rounds."
+        )
 
     st.divider()
 
