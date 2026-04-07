@@ -10,30 +10,39 @@ module objects, avoiding isinstance / identity mismatches.
 """
 
 import importlib
+import importlib.abc
+import importlib.machinery
 import sys
 
 _SUBPACKAGES = ("scripts", "benchmarks", "data", "log_viz")
 
 
-class _AflowAliasImporter:
-    """Redirect ``aflow.X.Y`` imports to ``X.Y``."""
+class _AflowAliasImporter(importlib.abc.MetaPathFinder):
+    """Redirect ``aflow.X.Y`` imports to ``X.Y``.
 
-    def find_module(self, fullname, _path=None):
+    Uses find_spec (PEP 451) so it works on Python 3.12+ where the
+    legacy find_module / load_module protocol was removed.
+    """
+
+    def find_spec(self, fullname, _path, _target=None):
         if fullname == "aflow" or not fullname.startswith("aflow."):
             return None
         rest = fullname[len("aflow.") :]
         top = rest.split(".")[0]
-        if top in _SUBPACKAGES:
-            return self
-        return None
+        if top not in _SUBPACKAGES:
+            return None
+        return importlib.machinery.ModuleSpec(fullname, _AflowAliasLoader())
 
-    def load_module(self, fullname):
-        if fullname in sys.modules:
-            return sys.modules[fullname]
-        real_name = fullname[len("aflow.") :]
+
+class _AflowAliasLoader(importlib.abc.Loader):
+    def create_module(self, spec):
+        real_name = spec.name[len("aflow.") :]
         real_mod = importlib.import_module(real_name)
-        sys.modules[fullname] = real_mod
+        sys.modules[spec.name] = real_mod
         return real_mod
+
+    def exec_module(self, module):
+        pass
 
 
 sys.meta_path.insert(0, _AflowAliasImporter())

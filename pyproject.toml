@@ -33,6 +33,9 @@ viz = [
     "streamlit==1.54.0",
     "plotly>=5.18.0",
 ]
+bridge = [
+    "aiohttp>=3.9",
+]
 dev = [
     "pytest>=8.0",
 ]

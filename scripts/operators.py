@@ -435,3 +435,89 @@ class MdEnsemble(Operator):
         most_frequent_index = Counter(all_responses).most_common(1)[0][0]
         final_answer = solutions[most_frequent_index]
         return {"solution": final_answer}
+
+
+class EvalBridgeCall:
+    """Calls a worker's Eval Bridge for full E2E agent execution.
+
+    The Eval Bridge is an HTTP server that wraps a TemporalHarness and
+    runs the complete TypeScript agent graph — tool calling, sub-agents,
+    and all post-agent logic — returning the final response.
+
+    Requires ``aiohttp`` (imported lazily so AFlow users who don't need
+    the bridge are unaffected).
+    """
+
+    def __init__(self, bridge_url: str = "http://localhost:9700"):
+        self.bridge_url = bridge_url.rstrip("/")
+
+    async def __call__(
+        self,
+        *,
+        user_id: str = "account_1",
+        message: str,
+        timeout_ms: int = 60_000,
+    ) -> dict:
+        import aiohttp
+
+        async with aiohttp.ClientSession() as session:
+            payload = {
+                "userId": user_id,
+                "message": message,
+                "timeoutMs": timeout_ms,
+            }
+            async with session.post(
+                f"{self.bridge_url}/_eval/run",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=timeout_ms / 1000 + 10),
+            ) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    raise RuntimeError(
+                        f"Eval Bridge error: {data.get('error', resp.status)}"
+                    )
+                return {
+                    "response": data["response"],
+                    "latency": data.get("latency", {}),
+                }
+
+
+class EvalBridgeConversation:
+    """Calls a worker's Eval Bridge for a multi-turn E2E conversation.
+
+    Requires ``aiohttp`` (imported lazily).
+    """
+
+    def __init__(self, bridge_url: str = "http://localhost:9700"):
+        self.bridge_url = bridge_url.rstrip("/")
+
+    async def __call__(
+        self,
+        *,
+        user_id: str = "account_1",
+        messages: list,
+        per_turn_timeout_ms: int = 60_000,
+    ) -> dict:
+        import aiohttp
+
+        async with aiohttp.ClientSession() as session:
+            payload = {
+                "userId": user_id,
+                "messages": messages,
+                "perTurnTimeoutMs": per_turn_timeout_ms,
+            }
+            total_timeout = (per_turn_timeout_ms / 1000 + 10) * len(messages)
+            async with session.post(
+                f"{self.bridge_url}/_eval/run-conversation",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=total_timeout),
+            ) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    raise RuntimeError(
+                        f"Eval Bridge error: {data.get('error', resp.status)}"
+                    )
+                return {
+                    "turns": data["turns"],
+                    "latency": data.get("latency", {}),
+                }

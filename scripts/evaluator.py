@@ -3,7 +3,7 @@
 # @Author  : all
 # @Desc    : Evaluation for different datasets
 
-from typing import Dict, Literal, Tuple
+from typing import Dict, Tuple
 
 from benchmarks.arc import ARCBenchmark
 from benchmarks.benchmark import BaseBenchmark
@@ -17,19 +17,24 @@ from benchmarks.livecodebench import LiveCodeBench
 from benchmarks.eve import EveBenchmark
 from benchmarks.strategyqa import StrategyQABenchmark
 
-# If you want to customize tasks, add task types here and provide evaluation functions, just like the ones given above
-DatasetType = Literal[
-    "HumanEval",
-    "MBPP",
-    "GSM8K",
-    "MATH",
-    "HotpotQA",
-    "DROP",
-    "LiveCodeBench",
-    "StrategyQA",
-    "ARC",
-    "Eve",
-]
+# DatasetType is str so external projects can register their own
+# benchmarks at runtime without modifying this file.
+DatasetType = str
+
+# Built-in benchmark registry — external projects extend this via
+# Evaluator.register_benchmark() before creating an Optimizer.
+_BUILTIN_BENCHMARKS: Dict[str, type] = {
+    "GSM8K": GSM8KBenchmark,
+    "MATH": MATHBenchmark,
+    "HumanEval": HumanEvalBenchmark,
+    "HotpotQA": HotpotQABenchmark,
+    "MBPP": MBPPBenchmark,
+    "DROP": DROPBenchmark,
+    "LiveCodeBench": LiveCodeBench,
+    "StrategyQA": StrategyQABenchmark,
+    "ARC": ARCBenchmark,
+    "Eve": EveBenchmark,
+}
 
 
 class Evaluator:
@@ -37,20 +42,26 @@ class Evaluator:
     Complete the evaluation for different datasets here
     """
 
+    _custom_benchmarks: Dict[str, type] = {}
+
+    @classmethod
+    def register_benchmark(cls, name: str, benchmark_class: type) -> None:
+        """Register a benchmark so the optimizer can use it by name.
+
+        Call this before creating an Optimizer instance::
+
+            from scripts.evaluator import Evaluator
+            from my_benchmarks import MyBenchmark
+            Evaluator.register_benchmark("MyDataset", MyBenchmark)
+        """
+        cls._custom_benchmarks[name] = benchmark_class
+
     def __init__(self, eval_path: str, data_path: str = "data/datasets"):
         self.eval_path = eval_path
         self.data_path = data_path
-        self.dataset_configs: Dict[DatasetType, BaseBenchmark] = {
-            "GSM8K": GSM8KBenchmark,
-            "MATH": MATHBenchmark,
-            "HumanEval": HumanEvalBenchmark,
-            "HotpotQA": HotpotQABenchmark,
-            "MBPP": MBPPBenchmark,
-            "DROP": DROPBenchmark,
-            "LiveCodeBench": LiveCodeBench,
-            "StrategyQA": StrategyQABenchmark,
-            "ARC": ARCBenchmark,
-            "Eve": EveBenchmark,
+        self.dataset_configs: Dict[str, type] = {
+            **_BUILTIN_BENCHMARKS,
+            **self._custom_benchmarks,
         }
 
     async def graph_evaluate(
