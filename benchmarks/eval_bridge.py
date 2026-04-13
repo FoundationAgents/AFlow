@@ -52,7 +52,7 @@ async def _judge_turn(criteria: dict, response: str, api_key: str) -> float:
         system = (
             "You are an evaluation judge. Score how well the assistant response "
             "matches the reference answer and satisfies the criteria. "
-            'Return ONLY a JSON object: {"score": <float 0.0 to 1.0>}'
+            "Return ONLY a JSON object: {\"score\": <float 0.0 to 1.0>}"
         )
         user_msg = (
             f"Criteria: {prompt}\n\n"
@@ -63,7 +63,7 @@ async def _judge_turn(criteria: dict, response: str, api_key: str) -> float:
         system = (
             "You are an evaluation judge. Score how well the assistant response "
             "satisfies the criteria. "
-            'Return ONLY a JSON object: {"score": <float 0.0 to 1.0>}'
+            "Return ONLY a JSON object: {\"score\": <float 0.0 to 1.0>}"
         )
         user_msg = f"Criteria: {prompt}\n\nResponse: {response}"
 
@@ -95,30 +95,24 @@ async def _call_bridge(messages: List[str], user_id: str, bridge_url: str) -> Li
         payload = {"userId": user_id, "message": messages[0], "timeoutMs": 90_000}
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                endpoint,
-                json=payload,
+                endpoint, json=payload,
                 timeout=aiohttp.ClientTimeout(total=120),
             ) as resp:
                 data = await resp.json()
                 if resp.status != 200:
-                    raise RuntimeError(
-                        f"Bridge error: {data.get('error', resp.status)}"
-                    )
+                    raise RuntimeError(f"Bridge error: {data.get('error', resp.status)}")
                 return data.get("messages", [data.get("response", "")])
     else:
         endpoint = f"{bridge_url}/_eval/run-conversation"
         payload = {"userId": user_id, "messages": messages, "perTurnTimeoutMs": 90_000}
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                endpoint,
-                json=payload,
+                endpoint, json=payload,
                 timeout=aiohttp.ClientTimeout(total=120 * len(messages)),
             ) as resp:
                 data = await resp.json()
                 if resp.status != 200:
-                    raise RuntimeError(
-                        f"Bridge error: {data.get('error', resp.status)}"
-                    )
+                    raise RuntimeError(f"Bridge error: {data.get('error', resp.status)}")
                 return data.get("turns", [])
 
 
@@ -142,7 +136,7 @@ class EvalBridgeBenchmark(BaseBenchmark):
         self.api_key = os.environ.get("OPENAI_API_KEY", "")
 
     def calculate_score(
-        self, _expected_output: Any, prediction: Any
+        self, expected_output: Any, prediction: Any
     ) -> Tuple[float, Any]:
         return 0.0, prediction
 
@@ -156,7 +150,7 @@ class EvalBridgeBenchmark(BaseBenchmark):
         return await _call_bridge(messages, user_id, self.bridge_url)
 
     async def evaluate_problem(
-        self, problem: dict, _graph: Callable
+        self, problem: dict, graph: Callable
     ) -> Tuple[str, str, str, str, str, float, float]:
         test_id = problem.get("test_id", "")
         suite = problem.get("suite", "")
@@ -179,9 +173,7 @@ class EvalBridgeBenchmark(BaseBenchmark):
                 turn_idx = len(agent_turns) - 1
             if turn_idx < 0 or turn_idx >= len(agent_turns):
                 turn_scores.append(0.0)
-                gate_details.append(
-                    {"turn": te["turn"], "error": "turn index out of range"}
-                )
+                gate_details.append({"turn": te["turn"], "error": "turn index out of range"})
                 continue
 
             response = agent_turns[turn_idx]
@@ -202,21 +194,19 @@ class EvalBridgeBenchmark(BaseBenchmark):
 
             turn_score = judge_score if all_gates_pass else 0.0
             turn_scores.append(turn_score)
-            gate_details.append(
-                {
-                    "turn": te["turn"],
-                    "judge_score": judge_score,
-                    "gates_pass": all_gates_pass,
-                    "failed_gates": failed_gates,
-                    "turn_score": turn_score,
-                }
-            )
+            gate_details.append({
+                "turn": te["turn"],
+                "judge_score": judge_score,
+                "gates_pass": all_gates_pass,
+                "failed_gates": failed_gates,
+                "turn_score": turn_score,
+            })
 
         sample_score = sum(turn_scores) / len(turn_scores) if turn_scores else 0.0
 
-        prediction_summary = (
-            " | ".join(t[:100] for t in agent_turns) if agent_turns else ""
-        )
+        prediction_summary = " | ".join(
+            t[:100] for t in agent_turns
+        ) if agent_turns else ""
 
         if sample_score < 0.6:
             self.log_mismatch(

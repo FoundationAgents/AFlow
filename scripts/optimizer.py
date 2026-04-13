@@ -229,6 +229,32 @@ class Optimizer:
             time.sleep(5)
 
         self._finalize_run_config(output_dir, converged=convergence_detected)
+        self._export_agent_graph()
+
+    def _export_agent_graph(self):
+        """Export the best round to agent-graph.json after optimization."""
+        try:
+            from scripts.graph_export import export_agent_graph
+
+            exec_model = getattr(self.execute_llm_config, "model", "gpt-4.1")
+            exec_temp = getattr(self.execute_llm_config, "temperature", 0.0)
+
+            graph = export_agent_graph(
+                workspace_path=self.root_path,
+                worker_name=self.dataset,
+                eval_config=getattr(self, "eval_config", None),
+                prompt_source_path=getattr(self, "prompt_source_path", None),
+                exec_model=exec_model,
+                exec_temperature=exec_temp,
+            )
+            logger.info(
+                f"Exported agent-graph.json: "
+                f"round {graph['metadata']['sourceRound']}, "
+                f"score {graph['metadata']['baselineScore']:.3f} -> "
+                f"{graph['metadata']['optimizedScore']:.3f}"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to export agent-graph.json: {e}")
 
     async def _optimize_graph(self):
         validation_n = self.validation_rounds  # validation datasets's execution number
@@ -488,7 +514,8 @@ class Optimizer:
             llm_config=self.execute_llm_config,
             dataset=self.dataset,
         )
-        await workflow(sample_data["question"])
+        dry_run_input = sample_data.get("question", json.dumps(sample_data))
+        await workflow(dry_run_input)
 
     def _extract_fields_from_response(self, response: str) -> Dict[str, str]:
         """
