@@ -281,7 +281,7 @@ class Test(Operator):
                 tb_str = traceback.format_exception(exc_type, exc_value, exc_traceback)
                 with open("tester.txt", "a") as f:
                     f.write("test_error of " + entry_point + "\n")
-                error_infomation = {
+                error_information = {
                     "test_fail_case": {
                         "test_case": test_case,
                         "error_type": "AssertionError",
@@ -289,7 +289,7 @@ class Test(Operator):
                         "traceback": tb_str,
                     }
                 }
-                fail_cases.append(error_infomation)
+                fail_cases.append(error_information)
             except Exception as e:
                 with open("tester.txt", "a") as f:
                     f.write(entry_point + " " + str(e) + "\n")
@@ -316,7 +316,7 @@ class Test(Operator):
                     problem=problem,
                     solution=solution,
                     exec_pass=f"executed unsuccessfully, error: \n {result}",
-                    test_fail="executed unsucessfully",
+                    test_fail="executed unsuccessfully",
                 )
                 response = await self._fill_node(ReflectionTestOp, prompt, mode="code_fill")
                 solution = response["response"]
